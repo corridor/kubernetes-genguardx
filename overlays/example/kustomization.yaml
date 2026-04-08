@@ -1,0 +1,75 @@
+namespace: genguardx
+
+resources:
+  - ../../base
+  - namespace.yaml
+
+images:
+  - name: corridor-image
+    newName: ghcr.io/example/genguardx
+    newTag: latest
+
+configMapGenerator:
+  - name: corridor-app-config
+    files:
+      - configs/api_config.py
+  - name: corridor-worker-config
+    files:
+      - configs/api_config.py
+  - name: corridor-jupyter-config
+    files:
+      - configs/jupyter_server_config.py
+      - configs/jupyterhub_config.py
+  - name: ingress-host-config
+    literals:
+      - HOST=genguardx.example.com
+
+replacements:
+  - source:
+      kind: ConfigMap
+      name: ingress-host-config
+      fieldPath: data.HOST
+    targets:
+      - select:
+          kind: Ingress
+          name: app-jupyter-ingress
+        fieldPaths:
+          - spec.rules.0.host
+          - spec.tls.0.hosts.0
+
+patches:
+  - target:
+      kind: PersistentVolumeClaim
+      name: data-pvc
+    patch: |-
+      - op: replace
+        path: /spec/storageClassName
+        value: shared-rwx
+  - target:
+      kind: PersistentVolumeClaim
+      name: uploads-pvc
+    patch: |-
+      - op: replace
+        path: /spec/storageClassName
+        value: shared-rwx
+  - target:
+      kind: PersistentVolumeClaim
+      name: databases-pvc
+    patch: |-
+      - op: replace
+        path: /spec/storageClassName
+        value: shared-rwx
+  - target:
+      kind: PersistentVolumeClaim
+      name: jupyter-pvc
+    patch: |-
+      - op: replace
+        path: /spec/storageClassName
+        value: shared-rwx
+  - target:
+      kind: PersistentVolumeClaim
+      name: notebooks-pvc
+    patch: |-
+      - op: replace
+        path: /spec/storageClassName
+        value: shared-rwx
