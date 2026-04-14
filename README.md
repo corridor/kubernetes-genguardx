@@ -1,4 +1,4 @@
-# kubernetes-corridor-genguardx
+# kubernetes-genguardx
 
 Kubernetes manifests for deploying GenGuardX with Kustomize.
 
