@@ -21,6 +21,7 @@ This repo is cloud agnostic. It can be used on any Kubernetes cluster, including
 
 ```text
 base/               Reusable application manifests
+shared/redis/       Shared Redis deployment for one or more GenGuardX environments
 overlays/example/   Minimal deployable overlay with placeholder configuration
 ```
 
@@ -28,6 +29,8 @@ overlays/example/   Minimal deployable overlay with placeholder configuration
 
 Update these files before deployment:
 
+- `shared/redis/kustomization.yaml`
+  - review the shared namespace if you want Redis in a different namespace
 - `overlays/base/kustomization.yaml`
   - set the namespace
   - set the application image
@@ -41,7 +44,15 @@ Update these files before deployment:
 
 If your cluster uses a different RWX storage class, update the PVC patches in `overlays/base/kustomization.yaml`.
 
+Redis manifests are kept under `shared/redis` because a single Redis deployment can be shared across multiple GenGuardX deployments instead of running one Redis instance per overlay.
+
 ## Deploy
+
+If you want to use the shared Redis instance, deploy it first:
+
+```bash
+kubectl apply -k shared/redis
+```
 
 Create the image pull secret in the target namespace (if required):
 
@@ -66,6 +77,8 @@ Verify rollout:
 kubectl get pods -n genguardx
 kubectl get svc -n genguardx
 kubectl get ingress -n genguardx
+kubectl get pods -n shared
+kubectl get svc -n shared
 ```
 
 ## Notes
