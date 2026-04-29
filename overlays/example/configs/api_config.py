@@ -9,7 +9,6 @@ SQLALCHEMY_DATABASE_URI = (
 OUTPUT_DATA_LOCATION = str(
     pathlib.Path(os.environ["CORRIDOR_HOME"]) / "data/results/{}.parquet"
 )
-REDIS_URL = "redis://redis.default.svc.cluster.local:6379/0"
 TASK_TIME_LIMIT = datetime.timedelta(hours=20).total_seconds()
 TASK_SOFT_TIME_LIMIT = datetime.timedelta(hours=20).total_seconds()
 
