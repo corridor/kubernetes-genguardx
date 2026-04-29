@@ -17,15 +17,15 @@ kubectl create secret docker-registry corridor-registry-secret \
   --docker-server=us-central1-docker.pkg.dev \
   --docker-username=_json_key \
   --docker-password="$(cat /tmp/corridor-registry-key.json)" \
-  --namespace genguardx
+  --namespace ggx
 
 # 3. Deploy the services (NOTE: Use --dry-run=server for safety)
 kubectl apply -k overlays/example
 
 # 4. Verify rollout
-kubectl get pods -n genguardx
-kubectl get svc -n genguardx
-kubectl get ingress -n genguardx
+kubectl get pods -n ggx
+kubectl get svc -n ggx
+kubectl get ingress -n ggx
 ```
 
 ## Architecture
