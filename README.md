@@ -2,20 +2,47 @@
 
 Kubernetes manifests for deploying GenGuardX with Kustomize.
 
+## Quickstart
+
+1. Get the docker credentials from the Corridor Team - Contact <support@corridorplatforms.com>
+2. Create a kubernetes secret with the docker credentials
+3. Deploy the services (Note: For more customized setups, check the Configurations section below)
+4. Verify the rollout
+
+```bash
+# 1. Copy the provided docker credentials json file to /tmp/corridor-registry-key.json (or a preferred path)
+
+# 2. Create a kubernetes secret with the docker credentials
+kubectl create secret docker-registry corridor-registry-secret \
+  --docker-server=us-central1-docker.pkg.dev \
+  --docker-username=_json_key \
+  --docker-password="$(cat /tmp/corridor-registry-key.json)" \
+  --namespace genguardx
+
+# 3. Deploy the services (NOTE: Use --dry-run=server for safety)
+kubectl apply -k overlays/example
+
+# 4. Verify rollout
+kubectl get pods -n genguardx
+kubectl get svc -n genguardx
+kubectl get ingress -n genguardx
+```
+
+## Architecture
+
 The deployment architecture is based on the existing Corridor GenGuardX setup:
 
-- `corridor-app`: primary API and web application
-- `corridor-worker`: background worker process
-- `corridor-jupyter`: Jupyter/JupyterHub-facing service
-- shared persistent volumes for app data, uploads, notebooks, and databases
-- a single ingress routing `/` to the app and `/jupyter` to Jupyter
+- `corridor-app`: Primary API and Web application which serves the GGX platform
+- `corridor-worker`: Background worker process for heavy execution tasks
+- `corridor-jupyter`: Jupyter/JupyterHub-facing service for ad-hoc analytics
+- Shared persistent volumes for data, uploads, notebooks, Jupyter state, and backups
+- A single ingress routing `/` to the app and `/jupyter` to jupyter-service
 
-This repo is cloud agnostic. It can be used on any Kubernetes cluster, including managed Kubernetes offerings such as GKE, EKS, and AKS, as long as the cluster provides:
+## Cloud Compatibility
 
-- an ingress controller
-- a TLS issuer or existing TLS secret
-- a `ReadWriteMany`-capable storage class
-- an image pull secret for the container registry you use
+This repo is cloud agnostic.
+
+It can be used on any Kubernetes cluster, including managed Kubernetes offerings such as GKE, EKS, AKS, Openshift, etc.
 
 ## Layout
 
@@ -24,52 +51,33 @@ base/               Reusable application manifests
 overlays/example/   Minimal deployable overlay with placeholder configuration
 ```
 
+It is possible to host multiple instances of GenGuardX - for example: `overlays/prod`, `overlays/staging`, `overlays/dev`. Or `overlays/team1` and `/overlays/team2`
+
 ## Configure
 
-Update these files before deployment:
+Feel free to configure the kubernetes setup based on your needs. Some common configurations are:
 
-- `overlays/base/kustomization.yaml`
-  - set the namespace
-  - set the application image
-  - set the public hostname
-- `overlays/base/configs/api_config.py`
-  - set database and product-specific application settings
-- `overlays/base/configs/jupyter_server_config.py`
-  - set Jupyter runtime settings if needed
-- `overlays/base/configs/jupyterhub_config.py`
-  - set API connectivity and any JupyterHub-specific settings
+- By default the `kustomization.yaml` uses the `latest` tag. To use a older version of Corridor GenGaurdX,
+  set the docker image tag in `overlays/example/kustomization.yaml` > `newTag` variable.
+- Set the public hostname based on your egress domain name in
+  `overlays/example/kustomization.yaml`
+- Set database and application-specific settings in
+  `overlays/example/configs/api_config.py`
+- If your cluster uses a different RWX storage class, update the PVC patches in
+  `overlays/example/kustomization.yaml`.
+- Configure TLS secret keys etc in `base/ingress.yaml`
+- Configure other nginx configs like gzip/timeout etc. in `base/ingress.yaml`
+- Change Memory requests and limits in the respective `base/*.yaml` files for that service.
 
-If your cluster uses a different RWX storage class, update the PVC patches in `overlays/base/kustomization.yaml`.
+## FAQs
 
-## Deploy
+**My pod is showing `ImagePullBackOff`**
 
-Create the image pull secret in the target namespace (if required):
+If your pod events show `ImagePullBackOff` or registry authorization errors -> The
+image authentication is likely the culprit. Double check if the correct docker credentials
+are added to the kubernetes secret
 
-```bash
-kubectl create namespace genguardx
-kubectl create secret docker-registry registry-secret \
-  --docker-server=<registry-host> \
-  --docker-username=<username> \
-  --docker-password=<password> \
-  --namespace genguardx
-```
+**App is taking a long time to start**
 
-Render and apply the overlay:
-
-```bash
-kubectl apply -k overlays/base
-```
-
-Verify rollout:
-
-```bash
-kubectl get pods -n genguardx
-kubectl get svc -n genguardx
-kubectl get ingress -n genguardx
-```
-
-## Notes
-
-- The base manifests assume the application image contains the `corridor-api`, `corridor-worker`, and `corridor-jupyter` entrypoints.
-- The app deployment runs a database migration in an init container before the main API starts.
-- The ingress manifest references `cert-manager.io/cluster-issuer: letsencrypt-prod`; adjust or remove that annotation if your cluster handles TLS differently.
+The app deployment runs a database migration in an init container before the main API starts.
+This can be decoupled to reduce restart time.
